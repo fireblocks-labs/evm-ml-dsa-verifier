@@ -1,0 +1,38 @@
+[profile.default]
+src = "src"
+out = "out"
+script = "script"
+libs = ["lib"]
+optimizer = true
+optimizer_runs = 10000
+# via-IR (Yul) codegen. The Yul pipeline's stack scheduler removes enough
+# DUP/SWAP traffic from the packed-SWAR kernels to cut the NTT block ~12% and
+# shrink the verifier runtime by 2,301 bytes versus legacy codegen; see
+# docs/EXPLAINER.md section 9.1. It applies to the whole tree because a test that
+# instantiates the verifier must compile it in the test's own compilation unit,
+# so a src-only restriction would measure a different artifact than it ships.
+via_ir = true
+solc_version = "0.8.30"
+evm_version = "osaka"
+# Tests call the Python reference implementation (pythonref/) and the fixture
+# generators (tools/fixtures/) through vm.ffi. See README.md for the one-time
+# virtualenv setup. fs_permissions is deliberately NOT granted.
+ffi = true
+
+# Deployment profile. The scripts in script/ read two artifacts off disk -- the
+# committed Keccak helper runtime and a prepare/prepare.py public-key blob -- so
+# they need fs_permissions, which the default profile deliberately withholds
+# from the test suite. Granting it here instead keeps `forge test` unable to
+# touch the filesystem while letting `forge script` read exactly two
+# directories. Everything else is inherited from [profile.default].
+#
+#   FOUNDRY_PROFILE=script forge script script/DeployHelper.s.sol:DeployHelper ...
+#
+# Put prepare.py output under deployments/. To read a blob from somewhere else,
+# add that directory here; the scripts also accept the hex inline through
+# PK_BLOB_HEX / F1600_RUNTIME_HEX and need no fs_permissions at all that way.
+[profile.script]
+fs_permissions = [
+    { access = "read", path = "./helpers" },
+    { access = "read", path = "./deployments" },
+]

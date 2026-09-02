@@ -1,0 +1,56 @@
+PQCsignKAT_Dilithium2.rsp — provenance
+FOR SECURITY RESEARCH ONLY — NOT FOR PRODUCTION USE
+
+FILE            PQCsignKAT_Dilithium2.rsp
+SIZE            1941571 bytes  (902 lines, 100 records)
+SHA-256         1d29c3b4ec68e3455f87f49b3386a2a6fc5e167c76e476c4770317ffbb97d242
+
+WHAT IT IS      100 (public key, message, signature) triples on 100 DISTINCT
+                ML-DSA-44 keys, in the NIST PQC "PQCsignKAT" response format:
+                blank-line-separated records of
+                    count / seed / mlen / msg / pk / sk / smlen / sm
+                with sm = signature (2420 B) || message and mlen = 33.
+
+WHAT IT IS NOT  **NOT a NIST artefact, and it carries NO NIST authority.**
+                This is the single most important line in this file, because
+                the FILENAME says "PQCsignKAT" and the FORMAT is NIST's, and
+                neither makes the CONTENT a NIST answer.
+
+                * The SEEDS and MESSAGES are the NIST KAT harness's: they are
+                  the output of AES-256-CTR-DRBG seeded with bytes(range(48)),
+                  48 seed bytes then `mlen` message bytes per record.  That is
+                  MACHINE-CHECKED — tools/fixtures/kat_build.py replays the
+                  DRBG and asserts every record's `seed` and `msg` byte for
+                  byte, and aborts the fixture build otherwise.
+                * The KEYS and SIGNATURES are NOT NIST's.  They were generated
+                  in-tree by pythonref/dilithium_py under **FIPS 204
+                  ML-DSA-44**.  Also machine-checked: kat_build.py asserts the
+                  pythonref oracle accepts all 100 as pure ML-DSA-44 with an
+                  EMPTY context before emitting any of them as must-accept.
+
+                Concretely: the same-named file in upstream dilithium-py
+                (https://raw.githubusercontent.com/GiacomoPope/dilithium-py/
+                main/assets/PQCsignKAT_Dilithium2.rsp, sha256
+                38ed991c5ca11e39ab23945ca37af89e059d16c5474bf8ba96b15cb4e948af2a)
+                holds ROUND-3 Dilithium2 vectors.  Its `seed`/`mlen`/`msg`
+                fields agree with this file record for record; its `pk`, `sk`
+                and `sm` DO NOT.  Round-3 Dilithium2 and FIPS 204 ML-DSA-44 are
+                different signature schemes, so that difference is expected and
+                is the reason this file cannot be replaced by the upstream one.
+
+UPSTREAM TOOL   https://github.com/GiacomoPope/dilithium-py  (MIT), whose
+                generate_KAT_example.py defines the DRBG-seeded harness this
+                file follows; the vendored subset lives in
+                pythonref/dilithium_py/.
+
+WHAT IT BUYS    BREADTH, not authority: 100 independent third-party key and
+                message pairs, verified on-chain by BOTH in-tree verifiers.
+                Evidentially it is a differential check against dilithium_py at
+                scale, the same class as the `fs_*` fuzz battery — NOT evidence
+                that NIST accepts these signatures.  The official-answer
+                coverage is elsewhere: test/ACVP_MLDSA44.t.sol (`ah_*`, `at_*`)
+                and test/FV2_AcvpKeyGen.t.sol (`kg_acvp_*`).
+
+CONSUMED BY     tools/fixtures/kat_build.py  ->  test/fixtures/kat_0..3.hex
+                test/KAT_MLDSA44.t.sol       (all 100 records, must-accept)
+                tools/fixtures/vecgen.py     (record 0's `mlen` only)

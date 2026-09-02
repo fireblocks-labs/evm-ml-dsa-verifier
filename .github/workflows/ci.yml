@@ -1,0 +1,429 @@
+# CI for evm-ml-dsa-verifier.
+#
+# FOR SECURITY RESEARCH ONLY — NOT FOR PRODUCTION USE
+#
+# WHAT THIS FILE IS FOR, precisely.  `formal/run_checks.sh` check 0 and the
+# `[ASSUMED] §FV.6` row of `formal/hypotheses.py` both say the same thing:
+# whoever controls the process that LAUNCHES the checks controls what those
+# processes see, and no in-band check can close that.  The mitigation they name
+# is running the checks from a checkout the runner made, under toolchains the
+# tree did not choose, in a process the tree did not start.  This workflow is
+# that.  Read `formal/hypotheses.py` §FV.6 for exactly how far it goes and
+# where it stops — in particular, this file lives IN the repository, so an
+# attacker who can write the tree can write this file too; only an
+# organisation-level required workflow or a reusable workflow owned by a
+# different repository removes that last step, and this repository has neither.
+#
+# THIS FILE IS INSIDE THE COUNT CHECKER. It was not, in the commit that added
+# it — `DOC_FILES` in `formal/hypotheses.py` named no path under `.github/`, so
+# nothing could see the number below, and it said 307 while the corpus was 315.
+# It is in `DOC_FILES` now, and `the whole EVM corpus (N tests)` is a pattern in
+# `DOC_COUNT_PATTERNS`, so drift here fails the hypotheses check.
+#
+# The jobs, with what each costs so a reader can tell which one went red.  All
+# three run on every push and every pull request; none of them is scheduled.
+#   forge-test   `forge build --sizes` + the whole EVM corpus (320 tests).
+#                A cold via-IR build at optimizer_runs=10000 dominates: ~3.5
+#                min on a developer laptop, so budget 10-20 min on a runner,
+#                plus lazily-generated fixtures and ~2 min of tests.
+#   formal       `./formal/run_checks.sh` — the fast checks, from a checkout
+#                this tree did not create, with CHECK0_PY pointing at the
+#                runner's system interpreter so check 0's two-interpreter
+#                agreement check is meaningful.  The checks themselves are ~2
+#                min; the Lean toolchain download and the venv are most of the
+#                wall clock.  It installs no foundry, and needs none: the fast
+#                checks read sources, not build artefacts.
+#   vacuity-and-mutation
+#                exactly the two phases the `formal` job does NOT run: the
+#                per-conjunct vacuity audit and the FULL 50-mutant campaign.
+#                It calls those two scripts directly instead of
+#                `./formal/run_checks.sh --extended`, because `--extended` runs
+#                the three fast checks first and this job would then be redoing
+#                the `formal` job's work before starting its own.  It installs
+#                no Lean toolchain, and needs none: neither phase calls `lake`.
+#                THIS IS THE EXPENSIVE JOB, by a wide margin — hours, on every
+#                push and every pull request.  The measured numbers are on the
+#                job itself.
+name: CI
+
+on:
+  # Unfiltered on purpose: "the checks ran on this exact commit" is worth having
+  # on every branch of a repository whose whole claim is machine-checked.  The
+  # cost is that a branch with an open PR runs twice, once for `push` and once
+  # for `pull_request`; the concurrency block below at least stops superseded
+  # runs from piling up.  Narrowing to `push: branches: [main]` halves the spend
+  # and is the usual choice — it is deliberately NOT made here.
+  push:
+  pull_request:
+  # There is no `schedule:` in this workflow.  A cron was the wrong home for the
+  # expensive job for two platform reasons that a reader should not have to
+  # rediscover: a `schedule` fires ONLY on the default branch, so it does
+  # nothing for a branch or a pull request; and GitHub disables scheduled
+  # workflows in a public repository after 60 days with no commits, silently, so
+  # a quiet quarter switched the campaign off while every fast run stayed green.
+  # The vacuity audit and the mutation campaign now run on the same two events
+  # as everything else, and what that costs is stated on the job.
+  workflow_dispatch:
+    inputs:
+      # `push` and `pull_request` always run the expensive job.  A dispatch is
+      # the one trigger a human aims by hand, so it keeps a way out: untick this
+      # to re-run the two fast jobs after a network flake without paying for
+      # hours of rebuilds.
+      run_mutation:
+        description: "Also run the vacuity audit + the FULL mutation campaign (hours)"
+        type: boolean
+        default: true
+
+# One run per (workflow, event, ref).  The event is part of the key so that the
+# `push` and `pull_request` runs of the same branch cannot cancel each other,
+# and so that a run started by hand is never cancelled by a push to the ref it
+# is sitting on.  Cancellation is restricted to the two events where a
+# superseded run is genuinely dead work — and now that the vacuity audit and the
+# mutation campaign run on those two events, a superseded run is HOURS of dead
+# work, so cancelling it is worth more than it was.
+#
+# These are the only `${{ }}` expressions in this file, and none of them reaches
+# a shell: a concurrency group is a string key, not a `run:` block, so a
+# hostile branch name has nothing here to inject into.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event_name }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'push' || github.event_name == 'pull_request' }}
+
+# NOTHING BY DEFAULT.  `permissions: {}` gives every job an empty GITHUB_TOKEN,
+# and each job below then asks for `contents: read` and nothing else.  The point
+# of writing it this way rather than granting `contents: read` workflow-wide is
+# the default a FUTURE job inherits: with `{}` at the top, a job someone adds
+# later starts with access to nothing at all and has to say what it needs.
+#
+# Why the jobs do not run on an empty token: `actions/checkout` authenticates
+# its fetch with GITHUB_TOKEN, and `contents: read` is the permission its own
+# README names as required.  This repository is public, so the content is
+# world-readable and the fetch would very likely succeed with no permissions at
+# all — but that is not documented behaviour, it is an accident of the
+# repository being public, and it would stop being true the day the repository
+# is made private.  One read scope on one repository is not worth a workflow
+# that breaks quietly, so the three jobs ask for it and stop there.
+#
+# What no job asks for, checked one at a time: `packages` (nothing installs from
+# a GitHub package registry), `id-token` (no OIDC, no cloud login), `issues` and
+# `pull-requests` (nothing comments, labels or closes anything), `checks`
+# (nothing publishes a check run of its own), `actions` (nothing reads, cancels
+# or re-runs another workflow), and no WRITE scope of any kind: no job pushes a
+# commit, a tag, a branch, a release or a page.  The artifact uploads need
+# nothing from this block either — `actions/upload-artifact` authenticates with
+# the runner's own Actions runtime token, not with GITHUB_TOKEN.
+#
+# No step reads `secrets.*`, and no step hands GITHUB_TOKEN to a script.  Every
+# checkout also sets `persist-credentials: false`, which keeps the token out of
+# the `.git/config` of the tree the jobs then build and test: nothing here runs
+# an authenticated git command after checkout, so the credential has no reason
+# to sit in the workspace where the code under test could read it.
+permissions: {}
+
+env:
+  FOUNDRY_PROFILE: default
+
+jobs:
+  forge-test:
+    name: forge test (EVM corpus)
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
+
+      - name: Install foundry
+        uses: foundry-rs/foundry-toolchain@908c540300062bd5a7e473851cdb4282204cee09 # v1.9.1
+        with:
+          # foundry.toml pins solc 0.8.30 and evm_version = "osaka"; the
+          # nightly channel is the one that knows the latter.  Pinned to the
+          # exact build test/E2E.t.sol's gas assertion was measured on, so
+          # codegen or metering drift cannot turn its +/-0.5% band red without
+          # someone changing this line on purpose.
+          version: nightly-c808c4cd6d104514204e77654e000929ca878b90
+          # The action's cache is `~/.foundry/cache`, i.e. the chain-FORK RPC
+          # cache. This tree forks no chain, so the cache would be a
+          # restore/save cycle over an empty directory on every run.
+          cache: false
+
+      # The tests call the Python reference implementation over vm.ffi
+      # (foundry.toml sets ffi = true), so the venv comes before forge test.
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
+        with:
+          python-version: "3.10"
+
+      - name: Build the reference venv
+        run: |
+          python3.10 -m venv pythonref/myenv
+          pythonref/myenv/bin/pip install --upgrade pip
+          pythonref/myenv/bin/pip install -r pythonref/requirements.txt
+
+      - name: forge build --sizes
+        # NOTE: this command exits non-zero because test/ZZZR_size.t.sol
+        # carries deliberately OVERSIZED probe contracts.  The check is on the
+        # shipped verifier, checked explicitly below.
+        run: forge build --sizes || true
+
+      - name: MLDSA44Verifier is under EIP-170
+        run: |
+          # Same non-zero exit as the step above (the oversized probes), and the
+          # JSON is still written.  MEASURED against the pinned build rather
+          # than assumed, because the shape below is the whole check: on this
+          # toolchain `forge build --sizes --json` exits 1 with
+          #   Error: some contracts exceed the runtime size limit (EIP-170: ...)
+          # on STDERR while STDOUT still carries the complete object, keyed by
+          # CONTRACT NAME, each value carrying `runtime_size` and `init_size`
+          # (plus the two margins).  Test contracts are excluded; the shipped
+          # verifier and the oversized probes are both present.
+          forge build --sizes --json > sizes.json || true
+          python3 - <<'PY'
+          import json, sys
+          # `|| true` above swallows a REAL build failure as well as the
+          # expected size-probe failure, so the two are told apart here.  A bare
+          # json.load()/KeyError would report a broken build as a traceback
+          # about a missing key, which is the wrong thing to go and look at.
+          try:
+              s = json.load(open("sizes.json"))
+          except Exception as exc:
+              sys.exit(f"sizes.json is unreadable ({exc!r}): `forge build` failed "
+                       "for some reason OTHER than the deliberately oversized "
+                       "probes in test/ZZZR_size.t.sol.  Read the build step above.")
+          if "MLDSA44Verifier" not in s:
+              sys.exit("sizes.json carries no MLDSA44Verifier entry, so the "
+                       "shipped verifier did not compile and this check has "
+                       f"nothing to check.  Contracts present: {sorted(s)}")
+          rt = s["MLDSA44Verifier"]["runtime_size"]
+          init = s["MLDSA44Verifier"]["init_size"]
+          print(f"MLDSA44Verifier runtime={rt} init={init} (EIP-170 limit 24576)")
+          sys.exit(0 if rt <= 24576 else 1)
+          PY
+
+      - name: forge test
+        run: forge test -vv
+
+  formal:
+    name: formal checks (run_checks.sh)
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
+        with:
+          python-version: "3.10"
+
+      - name: Build the reference venv
+        run: |
+          python3.10 -m venv pythonref/myenv
+          pythonref/myenv/bin/pip install --upgrade pip
+          pythonref/myenv/bin/pip install -r pythonref/requirements.txt
+
+      - name: Install elan + the pinned Lean toolchain
+        run: |
+          set -euo pipefail
+          # DIGEST-VERIFIED, AND ON THE BINARY THAT ACTUALLY RUNS.  This step
+          # used to fetch `elan-init.sh` at tag v4.2.3 and check its SHA-256,
+          # which pinned a WRAPPER rather than an installer: that script's own
+          # linux branch is
+          #     curl -sSfL "$ELAN_UPDATE_ROOT/latest/download/elan-$_arch.tar.gz"
+          # so having verified the wrapper it then downloaded the elan binary
+          # from `releases/latest` — unpinned, moving, and checked against
+          # nothing.  The verified digest covered none of the code that ran,
+          # which is the same "pinned means only written down" failure the
+          # fixture loaders exist to avoid.  So fetch the v4.2.3 release asset
+          # directly and check ITS digest.  The tarball holds exactly one file,
+          # `elan-init`, and that binary is what the wrapper would have executed.
+          #
+          # The asset is the x86_64 glibc build, which is what `ubuntu-latest`
+          # is.  Moving this job to an arm runner needs the arm asset and its
+          # own digest, and will fail here loudly rather than silently.
+          #
+          # `sha256sum` (coreutils), not `shasum` (perl): one of the two is
+          # guaranteed on a minimal image.
+          #
+          # Unpacked in a temp directory, NOT in the checkout: nothing this
+          # workflow downloads should land in the tree the checks are about to
+          # digest and walk.
+          elan_tmp="$(mktemp -d)"
+          curl -fsSL --proto '=https' --tlsv1.2 \
+            https://github.com/leanprover/elan/releases/download/v4.2.3/elan-x86_64-unknown-linux-gnu.tar.gz \
+            -o "$elan_tmp/elan.tar.gz"
+          echo "df0b2b3a439961ffcbb3985214365ffe40f49bc871df04dff268c7d8e21ca8b2  $elan_tmp/elan.tar.gz" \
+            | sha256sum -c -
+          tar xzf "$elan_tmp/elan.tar.gz" -C "$elan_tmp"
+          "$elan_tmp/elan-init" -y --default-toolchain "$(cat formal/lean/lean-toolchain)"
+          echo "$HOME/.elan/bin" >> "$GITHUB_PATH"
+
+      - name: Check interpreters, on the record
+        # Check 0 refuses unless (a) a bootstrap interpreter exists whose
+        # realpath is OUTSIDE the repository, (b) $PY's realpath is outside it
+        # too, and (c) the two are different executables.  On a runner, $PY is
+        # the venv (a symlink to the setup-python interpreter) and CHECK0_PY is
+        # /usr/bin/python3, which is a different build.
+        run: |
+          echo "CHECK0_PY = $(readlink -f /usr/bin/python3)"
+          echo "\$PY      = $(readlink -f pythonref/myenv/bin/python)"
+
+      - name: Run the checks
+        env:
+          CHECK0_PY: /usr/bin/python3
+        run: |
+          set -o pipefail
+          LAKE="$HOME/.elan/bin/lake" ./formal/run_checks.sh 2>&1 | tee checks.log
+          grep -q '^ALL CHECKS PASS' checks.log
+
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        if: always()
+        with:
+          name: checks-log
+          path: checks.log
+
+  vacuity-and-mutation:
+    name: vacuity audit + FULL mutation campaign
+    # WHAT THIS COSTS, ON EVERY PUSH AND EVERY PULL REQUEST, so the bill is not
+    # a surprise.  Both phases are the same shape of work — re-run an expensive
+    # check once per injected defect — and both were measured, not guessed:
+    #   * the mutation campaign took 54 minutes of wall clock at `--jobs 4` and
+    #     about 3.4 hours of CPU, because every mutant is a full via-IR rebuild
+    #     of the corpus at optimizer_runs=10000;
+    #   * the vacuity audit re-runs the ~60 s obligation suite once for each of
+    #     the 232 pinned injected defects, which is close to 4 hours of CPU and
+    #     roughly an hour at `--jobs 4`.
+    # Those numbers come from a developer machine with more cores than a
+    # GitHub-hosted Linux runner has (2 on the standard tier, 4 for a public
+    # repository), so expect this job to be SLOWER there: budget something in
+    # the region of two to four hours of runner time per push, and the same
+    # again for the `pull_request` run of a branch that has one open.  The two
+    # phases together are about 7 hours of CPU, so on a two-core runner the job
+    # gets close to the timeout below rather than comfortably inside it.  Nothing
+    # here narrows that — no path filter, no label trigger, no cron — because
+    # running on push and pull request is the point.  If the spend stops being
+    # worth it, a path filter (the campaign only cares about `src/`, `test/` and
+    # `formal/`) or a label trigger are the two obvious knobs.
+    #
+    # This job is expensive (see the timeout note below), so unlike the two fast
+    # jobs it does not run on every push. It runs on every pull request, and on
+    # pushes to `main` only. A manual dispatch can opt out by unticking the
+    # input; on `push` and `pull_request` the `inputs` context is empty, which is
+    # why the condition tests the event name before reading it.
+    if: >-
+      github.event_name == 'pull_request'
+      || (github.event_name == 'push' && github.ref == 'refs/heads/main')
+      || (github.event_name == 'workflow_dispatch' && inputs.run_mutation)
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    # GitHub-hosted runners cap a single job at 6h, so anything above 360 is
+    # inert: the platform kills the job instead of this timeout firing. 350
+    # leaves the two phases the most time they can actually get while still
+    # failing as a workflow timeout rather than an opaque platform kill.
+    timeout-minutes: 350
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
+
+      - name: Install foundry
+        uses: foundry-rs/foundry-toolchain@908c540300062bd5a7e473851cdb4282204cee09 # v1.9.1
+        with:
+          # Same pin as the forge-test job, for the same reason.  Only the
+          # mutation campaign needs foundry — it rebuilds and re-runs the EVM
+          # corpus once per mutant.  The vacuity audit compiles no Solidity.
+          version: nightly-c808c4cd6d104514204e77654e000929ca878b90
+          cache: false
+
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
+        with:
+          python-version: "3.10"
+
+      - name: Build the reference venv
+        # Both phases need it, and neither takes its interpreter from PATH: the
+        # vacuity audit spawns `verify_all.py` under
+        # `pythonref/myenv/bin/python` because that path is written into the
+        # audit itself, and the corpus the mutation campaign rebuilds reaches
+        # the Python reference over vm.ffi through the same interpreter.
+        run: |
+          python3.10 -m venv pythonref/myenv
+          pythonref/myenv/bin/pip install --upgrade pip
+          pythonref/myenv/bin/pip install -r pythonref/requirements.txt
+
+      # NO LEAN TOOLCHAIN IS INSTALLED HERE, and none is missing.  Neither the
+      # vacuity audit nor the mutation campaign calls `lake`: the audit drives
+      # the z3 obligation suite and the campaign drives `forge test`.  The Lean
+      # axiom check belongs to the `formal` job, which is where elan is
+      # installed.  There is also no CHECK0_PY here, for the same reason: check
+      # 0's two-interpreter anchor check is part of `run_checks.sh`, which this
+      # job deliberately does not call.
+
+      - name: Per-conjunct vacuity audit
+        # `formal/run_checks.sh --extended` runs this, but only after re-running
+        # the three fast checks the `formal` job has already run on the same
+        # commit.  This is the same invocation with that duplication removed:
+        # the script's own line is
+        #     "$PY" formal/z3/vacuity_audit.py --jobs "${JOBS:-6}"
+        # and there is nothing else to it — in particular no MLDSA_REPO, unlike
+        # the obligation-suite check next to it, because the audit derives the
+        # repository root from its own location and injects it into the
+        # environment of every `verify_all.py` subprocess it starts.  `--jobs 4`
+        # rather than the script's 6, to match the cores a runner actually has;
+        # the number is written at the call site instead of being carried in by
+        # a JOBS environment variable, so what ran is visible in the log.
+        #
+        # The exit status is the whole check: 0 only if every obligation AND
+        # every conjunct is load-bearing, every non-equivalent injected defect
+        # kills something, and nothing crashed.  A conjunct that no defect can
+        # break is a check that checks nothing, and it fails here unless it is
+        # listed in the audit's exempt set with a written reason.
+        run: |
+          set -o pipefail
+          pythonref/myenv/bin/python formal/z3/vacuity_audit.py --jobs 4 2>&1 \
+            | tee vacuity-audit.log
+
+      - name: FULL mutation campaign — all 50 catalogued mutants
+        # The other half of what `--extended` adds, invoked the same way the
+        # script invokes it:
+        #     "$PY" formal/mutation/run_mutation.py --full --jobs "$MUT_JOBS"
+        # `--full` is the only mode allowed to print the published 45/45
+        # non-equivalent kill rate, and it implies --no-fail-fast so that each
+        # mutant's killer list is the whole set of tests that detect it rather
+        # than an order-dependent prefix.  A SAMPLED run would be minutes
+        # instead of hours and is what `run_checks.sh --full` does, but a sample
+        # is not the campaign and must never be quoted as one.
+        #
+        # Exit status is the check again: non-zero on a non-equivalent survivor
+        # (a named test gap), on an unattributed verdict, on a pinned equivalent
+        # mutant that something managed to kill, or on a run that did not reach
+        # every mutant in the catalogue.
+        #
+        # A full run REWRITES formal/mutation/mutation_results_final.json — in
+        # the runner's checkout only.  Nothing here commits or pushes anything;
+        # the artifact upload below is the only thing that leaves this job.
+        #
+        # Each of the 4 workers gets its own workspace under the system temp
+        # directory, a few hundred MB apiece, because mutants patch files in
+        # place.  The driver checks free space before it builds anything and
+        # refuses with a number rather than filling the disk; MUT_WS_ROOT moves
+        # the workspaces if a runner image ever runs short.
+        run: |
+          set -o pipefail
+          pythonref/myenv/bin/python formal/mutation/run_mutation.py --full --jobs 4 2>&1 \
+            | tee mutation-campaign.log
+
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        if: always()
+        with:
+          name: vacuity-and-mutation-logs
+          # One log per phase, so a failure is read without unpicking which of
+          # the two produced which lines.  Either may be absent if the job was
+          # cancelled before that step ran; a missing path is a warning here,
+          # not a failure.
+          path: |
+            vacuity-audit.log
+            mutation-campaign.log

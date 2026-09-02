@@ -1,0 +1,8 @@
+# Python reference stack for the ffi tests and the formal gates.
+# Install into pythonref/myenv (see README.md):
+#   python3.10 -m venv pythonref/myenv
+#   pythonref/myenv/bin/pip install -r pythonref/requirements.txt
+pycryptodome == 3.23.0
+eth_abi == 5.2.0
+z3-solver == 5.0.0.0
+polyntt @ git+https://github.com/ZKNoxHQ/NTT.git@3ac5f5dc0b204e91df4f68e347ade2bd4a82bb37#subdirectory=assets/pythonref/

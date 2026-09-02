@@ -1,0 +1,66 @@
+Wycheproof ML-DSA-44 verification test vectors — provenance
+FOR SECURITY RESEARCH ONLY — NOT FOR PRODUCTION USE
+
+FILE            mldsa_44_verify_test.json
+URL             https://raw.githubusercontent.com/C2SP/wycheproof/main/testvectors_v1/mldsa_44_verify_test.json
+UPSTREAM REPO   https://github.com/C2SP/wycheproof   (path testvectors_v1/mldsa_44_verify_test.json)
+RETRIEVED       2026-08-09  (HTTP 200, curl -sSL)
+SIZE            1081169 bytes
+SHA-256         5ec04790c240c443ca8b662b8fc871834602c7cce87fcd36a193110745b2b9ea
+LAST UPSTREAM   commit 6d7cccd0fcb1917368579adeeac10fe802f1b521, 2026-06-06T15:36:36Z
+COMMIT          (newest commit touching this path at retrieval time)
+
+VERBATIM        The file is stored byte-for-byte as downloaded. No filtering was
+                applied: the whole file is already ML-DSA-44 only
+                (top-level "algorithm": "ML-DSA-44") and is 1.03 MiB, below the
+                5 MB threshold at which filtering would have been considered.
+
+CONTENT         algorithm         ML-DSA-44
+                generatorVersion  1
+                schema            mldsa_verify_schema.json
+                numberOfTests     180
+                testGroups        27   (each: type=MlDsaVerify, publicKey,
+                                        publicKeyDer, tests[])
+                results            77 valid, 103 invalid, 0 acceptable
+
+FLAG HISTOGRAM (a test may carry several flags)
+                ValidSignature            64
+                BoundaryCondition         61
+                ManySteps                 44
+                InfinityNormViolation     42
+                ZeroPublicKey             35
+                InvalidSignature          33
+                InvalidHintsEncoding       8
+                ModifiedSignature          7
+                InvalidContext             5
+                IncorrectPublicKeyLength   4
+                IncorrectSignatureLength   3
+                InvalidPrivateKey          2
+
+WHY THIS CORPUS
+                The official NIST ACVP sigVer set (already exercised by
+                test/ACVP_MLDSA44.t.sol) does not systematically cover
+                malformed HintBitPack encodings.  Wycheproof does:
+                tcId 15..19 and 137..139 are exactly the "non-canonical hint
+                encoding" class — reverse order, repeated index, non-zero
+                padding, limit going backwards, limits that read past the hint
+                section.  tcId 18 ("signature with a repeated hint") is the
+                Wycheproof case that reproduces CVE-2026-24850 in RustCrypto
+                `ml-dsa`; it passes ACVP and fails Wycheproof.
+
+SIGN CORPORA    CHECKED AND NOT WIRED IN, so the next reviewer does not
+NOT USED        re-derive it.  The C2SP/Wycheproof `testvectors_v1` tree also
+                carries ML-DSA-44 SIGNING corpora (`mldsa_44_sign_test.json`
+                and `mldsa_44_standard_sign_test.json`, 159 cases between
+                them).  They were fetched and distilled: after dropping the
+                cases whose (pk, message, signature) triple is already present
+                in the verify corpus above or in the ACVP shards, exactly
+                **2 distinct novel triples** remain, and both are ordinary
+                valid signatures under keys already exercised elsewhere.  Two
+                cases do not justify a third corpus, a second provenance pin
+                and another shard family, so they are deliberately not wired
+                in.  If that changes upstream, re-run the census before
+                assuming this line is still true.
+
+CONSUMED BY     tools/fixtures/wycheproof_build.py  ->  test/fixtures/wp*.hex
+                test/SEC2_Wycheproof.t.sol

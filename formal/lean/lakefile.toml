@@ -1,0 +1,6 @@
+name = "mldsa"
+version = "0.1.0"
+defaultTargets = ["Mldsa"]
+
+[[lean_lib]]
+name = "Mldsa"

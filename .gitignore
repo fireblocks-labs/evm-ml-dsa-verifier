@@ -1,0 +1,41 @@
+# foundry build artifacts
+out/
+cache/
+
+# python
+pythonref/myenv/
+__pycache__/
+*.pyc
+.venv/
+venv/
+
+# lean build artifacts
+formal/lean/.lake/
+
+# regenerated test fixtures (deterministic; rebuilt by tools/fixtures/*_build.py
+# or lazily on first `forge test` — see tools/fixtures/README.md)
+test/fixtures/
+
+# gas-profiling artifacts (tools/profile.sh)
+profiles/
+
+# artifacts the documented commands write into the tree
+broadcast/
+checks.log
+checks-extended.log
+*.log
+sizes.json
+elan-init.sh
+
+# editors / tooling
+.vscode/
+.idea/
+node_modules/
+
+# OS noise
+.DS_Store
+
+# local env files (never commit secrets)
+.env
+.env.*
+!.env.example

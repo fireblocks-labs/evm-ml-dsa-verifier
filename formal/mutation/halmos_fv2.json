@@ -1,0 +1,178 @@
+[
+ {
+  "contract": "FV2Barrett",
+  "function": "check_w0_domainConstants",
+  "verdict": "PASS",
+  "seconds": 202.3,
+  "expected": "PASS",
+  "ok": true
+ },
+ {
+  "contract": "FV2Barrett",
+  "function": "check_w1_firstMulIsLaneLocal",
+  "verdict": "PASS",
+  "seconds": 2.0,
+  "expected": "PASS",
+  "ok": true
+ },
+ {
+  "contract": "FV2Barrett",
+  "function": "check_w2_shrIsFloorDiv",
+  "verdict": "PASS",
+  "seconds": 2.7,
+  "expected": "PASS",
+  "ok": true
+ },
+ {
+  "contract": "FV2Barrett",
+  "function": "check_w3_qhatFitsAndSecondMulNoWrap",
+  "verdict": "TIMEOUT",
+  "seconds": 302.2,
+  "expected": "PASS",
+  "ok": false
+ },
+ {
+  "contract": "FV2Barrett",
+  "function": "check_w4_subIsExactWhenNoBorrow",
+  "verdict": "PASS",
+  "seconds": 2.1,
+  "expected": "PASS",
+  "ok": true
+ },
+ {
+  "contract": "FV2Barrett",
+  "function": "check_w5_kernelIsTheOpcodeChain",
+  "verdict": "PASS",
+  "seconds": 2.0,
+  "expected": "PASS",
+  "ok": true
+ },
+ {
+  "contract": "FV2Barrett",
+  "function": "check_w6_transfer",
+  "verdict": "PASS",
+  "seconds": 2.1,
+  "expected": "PASS",
+  "ok": true
+ },
+ {
+  "contract": "FV2Barrett",
+  "function": "check_w7_andQhatm31Model",
+  "verdict": "PASS",
+  "seconds": 2.0,
+  "expected": "PASS",
+  "ok": true
+ },
+ {
+  "contract": "FV2Barrett",
+  "function": "check_w8_step2MaskModel",
+  "verdict": "PASS",
+  "seconds": 2.0,
+  "expected": "PASS",
+  "ok": true
+ },
+ {
+  "contract": "FV2Barrett",
+  "function": "check_w8b_lanePackingIsLossless",
+  "verdict": "PASS",
+  "seconds": 2.0,
+  "expected": "PASS",
+  "ok": true
+ },
+ {
+  "contract": "FV2Barrett",
+  "function": "check_w9_packedMulIsLaneLocal",
+  "verdict": "PASS",
+  "seconds": 2.0,
+  "expected": "PASS",
+  "ok": true
+ },
+ {
+  "contract": "FV2Barrett",
+  "function": "check_w10_swarIsTheComposition",
+  "verdict": "PASS",
+  "seconds": 2.0,
+  "expected": "PASS",
+  "ok": true
+ },
+ {
+  "contract": "FV2Barrett",
+  "function": "check_w11_swarStepsAreMaskedScalarSteps",
+  "verdict": "PASS",
+  "seconds": 2.0,
+  "expected": "PASS",
+  "ok": true
+ },
+ {
+  "contract": "FV2Barrett",
+  "function": "check_w11b_swarIsLanewiseScalar",
+  "verdict": "TIMEOUT",
+  "seconds": 302.4,
+  "expected": "PASS",
+  "ok": false
+ },
+ {
+  "contract": "FV2Barrett",
+  "function": "check_w12_firstFailIsReal",
+  "verdict": "PASS",
+  "seconds": 2.0,
+  "expected": "PASS",
+  "ok": true
+ },
+ {
+  "contract": "FV2Canaries",
+  "function": "check_k0_toolBites",
+  "verdict": "FAIL",
+  "seconds": 2.1,
+  "expected": "FAIL",
+  "ok": true
+ },
+ {
+  "contract": "FV2Canaries",
+  "function": "check_k1_domainIsLoadBearing",
+  "verdict": "FAIL",
+  "seconds": 2.2,
+  "expected": "FAIL",
+  "ok": true
+ },
+ {
+  "contract": "FV2Canaries",
+  "function": "check_k2_w6NotVacuous",
+  "verdict": "FAIL",
+  "seconds": 2.2,
+  "expected": "FAIL",
+  "ok": true
+ },
+ {
+  "contract": "FV2Canaries",
+  "function": "check_k3_swarNeedsLaneBound",
+  "verdict": "FAIL",
+  "seconds": 2.1,
+  "expected": "FAIL",
+  "ok": true
+ },
+ {
+  "contract": "FV2Canaries",
+  "function": "check_k4_subNeedsNoBorrow",
+  "verdict": "FAIL",
+  "seconds": 2.1,
+  "expected": "FAIL",
+  "ok": true
+ },
+ {
+  "contract": "FV2Canaries",
+  "function": "check_k5_step2IsLoadBearing",
+  "verdict": "FAIL",
+  "seconds": 2.2,
+  "expected": "FAIL",
+  "ok": true
+ },
+ {
+  "contract": "FV2Canaries",
+  "function": "check_k6_qhatm31IsNotIdentity",
+  "verdict": "FAIL",
+  "seconds": 2.1,
+  "expected": "FAIL",
+  "ok": true
+ }
+]

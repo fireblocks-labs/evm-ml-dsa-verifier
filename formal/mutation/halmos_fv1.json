@@ -1,0 +1,194 @@
+[
+ {
+  "contract": "FVKernels",
+  "function": "check_a1_centeredMapStrict",
+  "verdict": "PASS",
+  "seconds": 2.0,
+  "expected": "PASS",
+  "ok": true
+ },
+ {
+  "contract": "FVKernels",
+  "function": "check_a2_normTestStrict",
+  "verdict": "PASS",
+  "seconds": 2.4,
+  "expected": "PASS",
+  "ok": true
+ },
+ {
+  "contract": "FVKernels",
+  "function": "check_a3_normTestLoose",
+  "verdict": "PASS",
+  "seconds": 3.5,
+  "expected": "PASS",
+  "ok": true
+ },
+ {
+  "contract": "FVKernels",
+  "function": "check_a4_centeredMapLoose",
+  "verdict": "PASS",
+  "seconds": 3.7,
+  "expected": "PASS",
+  "ok": true
+ },
+ {
+  "contract": "FVKernels",
+  "function": "check_a5_bitExtract",
+  "verdict": "PASS",
+  "seconds": 3.4,
+  "expected": "PASS",
+  "ok": true
+ },
+ {
+  "contract": "FVKernels",
+  "function": "check_b1_useHint",
+  "verdict": "PASS",
+  "seconds": 4.3,
+  "expected": "PASS",
+  "ok": true
+ },
+ {
+  "contract": "FVKernels",
+  "function": "check_c1_lazyBarrettForward",
+  "verdict": "TIMEOUT",
+  "seconds": 302.2,
+  "expected": "PASS",
+  "ok": false
+ },
+ {
+  "contract": "FVKernels",
+  "function": "check_c2_lazyBarrettInverse",
+  "verdict": "TIMEOUT",
+  "seconds": 302.2,
+  "expected": "PASS",
+  "ok": false
+ },
+ {
+  "contract": "FVKernels",
+  "function": "check_c1a_barrettCongruenceOnly",
+  "verdict": "TIMEOUT",
+  "seconds": 302.1,
+  "expected": "PASS",
+  "ok": false
+ },
+ {
+  "contract": "FVKernels",
+  "function": "check_c1b_barrettQhatBound",
+  "verdict": "PASS",
+  "seconds": 2.0,
+  "expected": "PASS",
+  "ok": true
+ },
+ {
+  "contract": "FVKernels",
+  "function": "check_c1c_barrettLazyBound",
+  "verdict": "TIMEOUT",
+  "seconds": 302.1,
+  "expected": "PASS",
+  "ok": false
+ },
+ {
+  "contract": "FVKernels",
+  "function": "check_c1d_barrettLazyBoundNarrow",
+  "verdict": "PASS",
+  "seconds": 18.4,
+  "expected": "PASS",
+  "ok": true
+ },
+ {
+  "contract": "FVKernels",
+  "function": "check_c1e_barrettLazyBoundWitness",
+  "verdict": "TIMEOUT",
+  "seconds": 302.3,
+  "expected": "PASS",
+  "ok": false
+ },
+ {
+  "contract": "FVKernels",
+  "function": "check_c3_swarQhatMasksLanes",
+  "verdict": "TIMEOUT",
+  "seconds": 302.3,
+  "expected": "PASS",
+  "ok": false
+ },
+ {
+  "contract": "FVKernels",
+  "function": "check_c4_swarBarrett4",
+  "verdict": "TIMEOUT",
+  "seconds": 302.7,
+  "expected": "PASS",
+  "ok": false
+ },
+ {
+  "contract": "FVKernels",
+  "function": "check_c6_swarQhatMaskWitness",
+  "verdict": "TIMEOUT",
+  "seconds": 302.3,
+  "expected": "PASS",
+  "ok": false
+ },
+ {
+  "contract": "FVKernels",
+  "function": "check_c7_swarBarrettWitness",
+  "verdict": "TIMEOUT",
+  "seconds": 302.5,
+  "expected": "PASS",
+  "ok": false
+ },
+ {
+  "contract": "FVKernels",
+  "function": "check_f1_pack6",
+  "verdict": "PASS",
+  "seconds": 2.0,
+  "expected": "PASS",
+  "ok": true
+ },
+ {
+  "contract": "FVCanaries",
+  "function": "check_c0_toolDetectsFailures",
+  "verdict": "FAIL",
+  "seconds": 2.1,
+  "expected": "FAIL",
+  "ok": true
+ },
+ {
+  "contract": "FVCanaries",
+  "function": "check_c1_vacuity_a1",
+  "verdict": "FAIL",
+  "seconds": 2.1,
+  "expected": "FAIL",
+  "ok": true
+ },
+ {
+  "contract": "FVCanaries",
+  "function": "check_c2_vacuity_b1",
+  "verdict": "FAIL",
+  "seconds": 2.5,
+  "expected": "FAIL",
+  "ok": true
+ },
+ {
+  "contract": "FVCanaries",
+  "function": "check_c4_useHintNeedsCanonicalInput",
+  "verdict": "FAIL",
+  "seconds": 4.5,
+  "expected": "FAIL",
+  "ok": true
+ },
+ {
+  "contract": "FVCanaries",
+  "function": "check_c5_swarNeedsLaneBound",
+  "verdict": "FAIL",
+  "seconds": 2.1,
+  "expected": "FAIL",
+  "ok": true
+ },
+ {
+  "contract": "FVCanaries",
+  "function": "check_c6_step2IsLoadBearing",
+  "verdict": "FAIL",
+  "seconds": 2.1,
+  "expected": "FAIL",
+  "ok": true
+ }
+]
